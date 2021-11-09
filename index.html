@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DinosourGame</title>
+    <style>
+        div {
+            text-align: center;
+        }
+
+        canvas {
+            border: 1px solid;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <canvas id="canvas" width="500" height="250">
+        </canvas>
+        <h2>게임을 시작하려면 스페이스 바를 누르세요.</h2>
+    </div>
+
+    <script>
+        let canvas = document.getElementById('canvas');
+        let ctx = canvas.getContext("2d");
+        let gameStart = false;
+        let gameOver = false;
+        let timer = 0;
+        let score = 0;
+        let jumpTimer = 0;
+        let animation;
+        let 나올장애물 = [];
+        let 장애물list = ["cactus", "fly", "doublecactus"]
+
+        let dinoImg = new Image(50, 50);
+        dinoImg.src = "./image/dinosour.png";
+        dinoImg.scale = 100
+
+        let cactusImg = new Image(50, 50);
+        cactusImg.src = "./image/cactus.png";
+
+        let flyImg = new Image(50, 50);
+        flyImg.src = "./image/flyDinosour.png";
+
+        // 공룡 설정
+        let dino = {
+            x: 20,
+            y: 190,
+            width: 40,
+            height: 50,
+            draw() {
+                ctx.fillStyle = "white";
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                ctx.drawImage(dinoImg, this.x, this.y);
+            }
+        }
+
+
+
+
+        // 선인장 조건
+        class Cactus {
+            constructor() {
+                this.x = 500;
+                this.y = 190;
+                this.width = 30;
+                this.height = 50;
+            }
+            draw() {
+                ctx.fillStyle = "white";
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                ctx.drawImage(cactusImg, this.x, this.y);
+            }
+        }
+
+        // 공중 장애물
+        class Fly {
+            constructor() {
+                this.x = 500;
+                this.y = 150;
+                this.width = 50;
+                this.height = 50;
+            }
+            draw() {
+                ctx.fillStyle = "white";
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                ctx.drawImage(flyImg, this.x, this.y);
+            }
+        }
+
+        // 지하 연속 장애물
+        class DoubleCactus {
+            constructor() {
+                this.x = 500;
+                this.y = 190;
+                this.width = 100;
+                this.height = 50;
+            }
+            draw() {
+                ctx.fillStyle = "white";
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                ctx.drawImage(cactusImg, this.x, this.y);
+                ctx.drawImage(cactusImg, this.x+50, this.y);
+            }
+        }
+
+        let scoreText = {
+            x: 400,
+            y: 20,
+            width: 50,
+            height: 50,
+            draw() {
+                ctx.font = "14px malgun gothic";
+                ctx.fillStyle = "#000000";
+                ctx.fillText("score : " + score, this.x, this.y);
+            }
+        }
+
+        let gameOverText = {
+            x: 180,
+            y: 100,
+            draw() {
+                ctx.font = "30px malgun gothic";
+                ctx.fillStyle = "#000000";
+                ctx.fillText("GameOver", this.x, this.y);
+                ctx.fillText("점수 : " + score, this.x + 20, this.y + 40)
+            }
+        }
+
+
+        const gameStartFunc = () => {
+            // 1초당 모니터 프레임만큼 실행
+            if (gameOver === false) {
+
+                const FramePlay = () => {
+                    animation = requestAnimationFrame(FramePlay);
+                    timer++
+                    ctx.clearRect(0, 0, canvas.width, canvas.height)
+                    if (timer % 180 === 0) {
+                        let 장애물;
+                        let randomNum = Math.ceil(Math.random() * 장애물list.length) - 1;
+                        console.log(장애물list[randomNum]);
+                        switch (장애물list[randomNum]) {
+                            case "cactus":
+                                장애물 = new Cactus
+                                break;
+                            case "fly":
+                                장애물 = new Fly
+                                break;
+                            case "doublecactus":
+                                장애물 = new DoubleCactus
+                                break;
+                        }
+                        나올장애물.push(장애물);
+                    }
+
+                    // 장애물 반복 생김
+                    나올장애물.forEach((a, i, o) => {
+                        // 장애물을 배열에서 지워줌;
+                        if (a.x < 0) {
+                            o.splice(i, 1);
+                        }
+
+
+                        충돌(dino, a);
+                        // 장애물이 나오는 주기
+                        a.x -= 3;
+
+                        // 장애물 소환
+                        a.draw();
+                    })
+
+                    if (jumping === true) {
+                        if (dino.y > 70) {
+                            dino.y -= 3;
+                        }
+                        jumpTimer++;
+                    }
+
+                    if (jumpTimer === 40) {
+                        jumping = false;
+                    }
+
+                    if (jumping === false) {
+                        if (dino.y < 190) {
+                            dino.y += 3;
+                        }
+                        jumpTimer = 0;
+                    }
+
+                    dino.draw(); // 공룡 소환
+                    scoreText.draw() // 점수
+                }
+
+                let jumping = false;
+
+                FramePlay();
+
+                const 충돌 = (dino, 생성장애물) => {
+                    let x충돌 = 생성장애물.x - (dino.x + dino.width);
+                    let y충돌 = 생성장애물.y - (dino.y + dino.width);
+
+                    if (x충돌 < 0 && y충돌 < 0) {
+                        gameOver = true;
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        cancelAnimationFrame(animation);
+                        나올장애물 = [];
+                        gameOverText.draw()
+                        score = 0;
+                    }
+                }
+                let getScorePoint = setInterval(() => {
+                    if (gameOver) {
+                        clearInterval(getScorePoint)
+                    } else {
+                        score++;
+                    }
+                }, 100)
+
+                document.addEventListener('keydown', (e) => {
+                    if (e.code === "Space") {
+                        jumping = true;
+
+                    }
+                })
+
+                document.addEventListener('keyup', (e) => {
+                    if (e.code === "Space") {
+                        jumping = false;
+                        if (gameOver) {
+                            FramePlay();
+                            gameOver = false;
+                            setInterval(() => {
+                                if (gameOver) {
+                                    clearInterval(getScorePoint)
+                                } else {
+                                    score++;
+                                }
+                            }, 100)
+                        }
+                    }
+                })
+            }
+
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.code === "Space") {
+
+                if (!gameStart) {
+                    gameStartFunc();
+                    gameStart = true;
+                }
+            }
+        })
+    </script>
+</body>
+
+</html>
